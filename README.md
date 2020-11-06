@@ -1,4 +1,7 @@
 # 1. 多人連線遊戲 (未完成)
+
+[![hackmd-github-sync-badge](https://hackmd.io/PbIOMVKiSKu831DGNtPd_g/badge)](https://hackmd.io/PbIOMVKiSKu831DGNtPd_g)
+
 ###### tags: `Side Projects`
 
 ## 遊戲架構
