@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Ball Game</h1>
+    <button id="newGameBtn">New Game</button>
+    <script>
+        /* Elements */
+        let newGameBtn = document.getElementById("newGameBtn");
+
+        // 創建對8080的 socket
+        let gameId = null;
+        let clientId = null;
+        let wsServer = new WebSocket("ws://localhost:8080");
+
+
+        /* Wiring Events */
+        newGameBtn.addEventListener('click', e => {
+            const payload = {
+                "method": "create",
+                "clientId": clientId,
+            };
+
+            wsServer.send(JSON.stringify(payload));
+        });
+
+        // 接收server的封包
+        wsServer.onmessage = message => {
+            const result = JSON.parse(message.data);
+
+            if (result.method === "connect") {
+                clientId = result.clientId;
+                console.log("My ClientId is " + clientId);
+            }
+
+            if (result.method === "create") {
+                gameId = result.game.id;
+                const balls = result.game.balls;
+                console.log("Create the game " + gameId + " with " + balls + " balls");
+            }
+        }
+
+    </script>
+</body>
+
+</html>
