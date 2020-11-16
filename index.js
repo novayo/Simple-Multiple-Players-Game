@@ -40,6 +40,7 @@ wsServer.on("request", request => {
             games[gameId] = {
                 "id": gameId,
                 "balls": 20,
+                "clients": [],
             }
 
             const payload = {
@@ -49,6 +50,52 @@ wsServer.on("request", request => {
 
             const client_connection = clients[clientId].connection;
             client_connection.send(JSON.stringify(payload));
+        }
+
+        // join Router
+        if (result.method === "join") {
+            const clientId = result.clientId;
+            const gameId = result.gameId;
+            const game = games[gameId];
+
+            if (game.clients.length >= 3) {
+                // sorry max players reach
+                return;
+            }
+
+            // 依照長度給顏色，現在只有一個，就給綠色
+            const color = { "0": "Red", "1": "Green", "2": "Blue" }[game.clients.length];
+            game.clients.push({
+                "clientId": clientId,
+                "color": color,
+            })
+
+            if (game.clients.length === 3) updateGameState();
+
+            const payload = {
+                "method": "join",
+                "game": game,
+            }
+
+            game.clients.forEach(c => {
+                clients[c.clientId].connection.send(JSON.stringify(payload));
+            });
+        }
+
+        // play Router
+        if (result.method === "play") {
+            const clientId = result.clientId;
+            const gameId = result.gameId;
+            const ballId = result.ballId;
+            const color = result.color;
+
+            let state = games[gameId].state;
+            if (!state) {
+                state = {}
+            }
+
+            state[ballId] = color;
+            games[gameId].state = state;
         }
     });
 
@@ -65,6 +112,23 @@ wsServer.on("request", request => {
 
     connection.send(JSON.stringify(payload));
 });
+
+
+function updateGameState() {
+
+    for (const g of Object.keys(games)) {
+        const payload = {
+            "method": "update",
+            "game": games[g],
+        }
+
+        games[g].clients.forEach(c => {
+            clients[c.clientId].connection.send(JSON.stringify(payload));
+        })
+    }
+
+    setTimeout(updateGameState, 500);
+}
 
 // 建立 client uid
 const guid = () => {

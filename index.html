@@ -10,17 +10,41 @@
 <body>
     <h1>Ball Game</h1>
     <button id="newGameBtn">New Game</button>
+    <button id="joinGameBtn">Join Game</button>
+    <input type="text" id="txtGameId">
+    <div id="divPlayers"></div>
+    <div id="divBoard"></div>
+
     <script>
         /* Elements */
         let newGameBtn = document.getElementById("newGameBtn");
+        let joinGameBtn = document.getElementById("joinGameBtn");
+        let txtGameId = document.getElementById("txtGameId");
+        let divPlayers = document.getElementById("divPlayers");
+        let divBoard = document.getElementById("divBoard");
 
         // 創建對8080的 socket
         let gameId = null;
         let clientId = null;
+        let playerColor = null;
         let wsServer = new WebSocket("ws://localhost:8080");
 
 
         /* Wiring Events */
+        joinGameBtn.addEventListener('click', e => {
+            if (gameId === null) {
+                gameId = txtGameId.value;
+            }
+
+            const payload = {
+                "method": "join",
+                "clientId": clientId,
+                "gameId": gameId,
+            };
+
+            wsServer.send(JSON.stringify(payload));
+        })
+
         newGameBtn.addEventListener('click', e => {
             const payload = {
                 "method": "create",
@@ -43,6 +67,65 @@
                 gameId = result.game.id;
                 const balls = result.game.balls;
                 console.log("Create the game " + gameId + " with " + balls + " balls");
+            }
+
+            if (result.method === "join") {
+                const game = result.game;
+
+                // 刪除原有的div玩家
+                while (divPlayers.firstChild) {
+                    divPlayers.removeChild(divPlayers.firstChild);
+                }
+
+                // 加入玩家到 div
+                game.clients.forEach(c => {
+                    const d = document.createElement("div");
+                    d.style.width = "200px";
+                    d.style.backgroundColor = c.color;
+                    d.textContent = c.clientId;
+                    divPlayers.appendChild(d);
+
+                    if (c.clientId === clientId) {
+                        playerColor = c.color;
+                    }
+                });
+
+                // 刪除原有的div玩家
+                while (divBoard.firstChild) {
+                    divBoard.removeChild(divBoard.firstChild);
+                }
+
+                for (let i = 0; i < game.balls; i++) {
+                    const b = document.createElement("button");
+                    b.id = "ball" + (i + 1);
+                    b.tag = i + 1;
+                    b.textContent = i + 1;
+                    b.style.width = "150px";
+                    b.style.height = "150px";
+                    b.addEventListener("click", e => {
+                        b.style.backgroundColor = playerColor;
+                        const payload = {
+                            "method": "play",
+                            "clientId": clientId,
+                            "gameId": gameId,
+                            "color": playerColor,
+                            "ballId": b.tag,
+                        }
+                        wsServer.send(JSON.stringify(payload));
+                    });
+                    divBoard.appendChild(b);
+                }
+            }
+
+            if (result.method === "update") {
+                const state = result.game.state;
+                if (!state) return;
+
+                for (const b of Object.keys(state)) {
+                    const color = state[b];
+                    const ballObject = document.getElementById("ball" + b);
+                    ballObject.style.backgroundColor = color;
+                }
             }
         }
 
